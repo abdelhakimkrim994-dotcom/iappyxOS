@@ -27,14 +27,11 @@ android {
         targetCompatibility JavaVersion.VERSION_1_8
     }
 
-    // Compile only the two native classes used by this isolated experiment.
+    // Replace the default Java source root so the original iappyxOS classes
+    // are not compiled into this minimal standalone experiment.
     sourceSets {
         main {
-            java {
-                setSrcDirs(['src/main/java'])
-                include 'com/iappyx/generated/placeholder/ByteOverlayTestActivity.java'
-                include 'com/iappyx/generated/placeholder/OverlayTestService.java'
-            }
+            java.srcDirs = ['src/byteOverlayTest/java']
         }
     }
 }
