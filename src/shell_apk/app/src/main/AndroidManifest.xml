@@ -209,6 +209,11 @@
                 android:resource="@xml/accessibility_service_config" />
         </service>
 
+        <!-- Byte Overlay Test 01: temporary floating bubble -->
+        <service
+            android:name="com.iappyx.generated.placeholder.OverlayTestService"
+            android:exported="false" />
+
         <!-- Background audio service -->
         <service
             android:name="com.iappyx.generated.placeholder.AudioService"
