@@ -38,7 +38,7 @@ public final class OverlayTestService extends Service {
     private final Handler refreshHandler = new Handler(Looper.getMainLooper());
     private final Runnable refreshTask = new Runnable() {
         @Override public void run() {
-            if (panelOpen) refreshTranscript();
+            if (panelOpen) refreshTranscript(false);
             refreshHandler.postDelayed(this, 1200);
         }
     };
@@ -206,7 +206,7 @@ public final class OverlayTestService extends Service {
         if (companionPanel == null || panelOpen) return;
         panelOpen = true;
         companionPanel.setVisibility(View.VISIBLE);
-        refreshTranscript();
+        refreshTranscript(true);
         layoutParams.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
         layoutParams.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
         layoutParams.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
@@ -241,15 +241,25 @@ public final class OverlayTestService extends Service {
         if (value.isEmpty()) return;
         if (ConversationManager.send(this, value)) {
             messageInput.setText("");
-            refreshTranscript();
+            refreshTranscript(true);
         } else {
             appendLine("Byte: That message could not be saved.");
         }
     }
 
-    private void refreshTranscript() {
+    private void refreshTranscript(boolean jumpToBottom) {
         if (transcript == null) return;
         try {
+            boolean wasAtBottom = true;
+            int previousScrollY = 0;
+            if (historyScroll != null && historyScroll.getChildCount() > 0) {
+                View content = historyScroll.getChildAt(0);
+                previousScrollY = historyScroll.getScrollY();
+                int distanceFromBottom = content.getBottom()
+                        - (historyScroll.getScrollY() + historyScroll.getHeight());
+                wasAtBottom = distanceFromBottom <= dp(24);
+            }
+
             JSONArray messages = ConversationRepository.getMessages(this);
             StringBuilder text = new StringBuilder();
             int start = Math.max(0, messages.length() - 40);
@@ -262,7 +272,21 @@ public final class OverlayTestService extends Service {
                 text.append(body).append("\n\n");
             }
             transcript.setText(text.toString());
-            if (historyScroll != null) historyScroll.post(() -> historyScroll.fullScroll(View.FOCUS_DOWN));
+
+            if (historyScroll != null) {
+                final boolean followLatest = jumpToBottom || wasAtBottom;
+                final int savedScrollY = previousScrollY;
+                historyScroll.post(() -> {
+                    if (followLatest) {
+                        historyScroll.fullScroll(View.FOCUS_DOWN);
+                    } else {
+                        View content = historyScroll.getChildAt(0);
+                        if (content == null) return;
+                        int maxScrollY = Math.max(0, content.getHeight() - historyScroll.getHeight());
+                        historyScroll.scrollTo(0, Math.min(savedScrollY, maxScrollY));
+                    }
+                });
+            }
         } catch (Exception e) {
             transcript.setText("Byte: Could not load the shared conversation.");
         }
