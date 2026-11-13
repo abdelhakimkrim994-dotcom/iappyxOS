@@ -7,6 +7,10 @@ import android.graphics.PixelFormat;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.os.IBinder;
+import android.os.Handler;
+import android.os.Looper;
+import org.json.JSONArray;
+import org.json.JSONObject;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
@@ -30,13 +34,22 @@ public final class OverlayTestService extends Service {
     private WindowManager.LayoutParams layoutParams;
     private LinearLayout companionPanel;
     private TextView transcript;
+    private ScrollView historyScroll;
     private EditText messageInput;
     private boolean panelOpen;
+    private final Handler refreshHandler = new Handler(Looper.getMainLooper());
+    private final Runnable refreshTask = new Runnable() {
+        @Override public void run() {
+            if (panelOpen) refreshTranscript();
+            refreshHandler.postDelayed(this, 1200);
+        }
+    };
 
     @Override public void onCreate() {
         super.onCreate();
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         addOverlay();
+        refreshHandler.postDelayed(refreshTask, 1200);
     }
 
     private void addOverlay() {
@@ -62,20 +75,20 @@ public final class OverlayTestService extends Service {
         companionPanel.setVisibility(View.GONE);
 
         TextView title = new TextView(this);
-        title.setText("Byte keyboard test");
+        title.setText("Byte");
         title.setTextColor(Color.WHITE);
         title.setTextSize(16);
         title.setTypeface(Typeface.DEFAULT, Typeface.BOLD);
         companionPanel.addView(title);
 
         TextView hint = new TextView(this);
-        hint.setText("Tap the field, type a message, then press Send. This is a local echo test.");
+        hint.setText("Your shared Byte conversation. Messages also appear in the full-screen app.");
         hint.setTextColor(Color.rgb(205, 216, 231));
         hint.setTextSize(12);
         hint.setPadding(0, dp(5), 0, dp(8));
         companionPanel.addView(hint);
 
-        ScrollView historyScroll = new ScrollView(this);
+        historyScroll = new ScrollView(this);
         historyScroll.setFillViewport(false);
         transcript = new TextView(this);
         transcript.setText("Byte: Floating keyboard test ready.\n");
@@ -195,6 +208,7 @@ public final class OverlayTestService extends Service {
         if (companionPanel == null || panelOpen) return;
         panelOpen = true;
         companionPanel.setVisibility(View.VISIBLE);
+        refreshTranscript();
         layoutParams.flags &= ~WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
         layoutParams.flags |= WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL;
         layoutParams.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
@@ -227,9 +241,33 @@ public final class OverlayTestService extends Service {
         if (messageInput == null) return;
         String value = messageInput.getText().toString().trim();
         if (value.isEmpty()) return;
-        appendLine("You: " + value);
-        appendLine("Byte: Keyboard input received. (Local test only.)");
-        messageInput.setText("");
+        if (ConversationManager.send(this, value)) {
+            messageInput.setText("");
+            refreshTranscript();
+        } else {
+            appendLine("Byte: That message could not be saved.");
+        }
+    }
+
+    private void refreshTranscript() {
+        if (transcript == null) return;
+        try {
+            JSONArray messages = ConversationRepository.getMessages(this);
+            StringBuilder text = new StringBuilder();
+            int start = Math.max(0, messages.length() - 40);
+            for (int i = start; i < messages.length(); i++) {
+                JSONObject item = messages.optJSONObject(i);
+                if (item == null) continue;
+                String role = item.optString("role", "assistant");
+                String body = item.optString("text", "");
+                text.append("user".equals(role) ? "You: " : "Byte: ");
+                text.append(body).append("\\n\\n");
+            }
+            transcript.setText(text.toString());
+            if (historyScroll != null) historyScroll.post(() -> historyScroll.fullScroll(View.FOCUS_DOWN));
+        } catch (Exception e) {
+            transcript.setText("Byte: Could not load the shared conversation.");
+        }
     }
 
     private void appendLine(String line) {
@@ -249,6 +287,7 @@ public final class OverlayTestService extends Service {
     }
 
     @Override public void onDestroy() {
+        refreshHandler.removeCallbacks(refreshTask);
         if (overlay != null && windowManager != null) {
             try { windowManager.removeView(overlay); } catch (Exception ignored) { }
             overlay = null;
