@@ -11,7 +11,7 @@ import java.util.UUID;
 /** Local, app-private project catalog. File bytes will live in a separate private directory. */
 public final class ProjectRepository extends SQLiteOpenHelper {
     private static final String DB_NAME = "byte_projects.db";
-    private static final int DB_VERSION = 1;
+    private static final int DB_VERSION = 2;
 
     public ProjectRepository(Context context) {
         super(context.getApplicationContext(), DB_NAME, null, DB_VERSION);
@@ -36,7 +36,85 @@ public final class ProjectRepository extends SQLiteOpenHelper {
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Schema migrations will be added explicitly; never discard a user's project data.
+        // Version 2 uses the existing notes and file metadata tables; no destructive migration.
+    }
+
+    public synchronized JSONObject getProjectDetails(String projectId) {
+        JSONObject result = new JSONObject();
+        SQLiteDatabase db = getReadableDatabase();
+        try (Cursor c = db.rawQuery("SELECT id,name,description,status,created_at,updated_at FROM projects WHERE id=?", new String[]{projectId})) {
+            if (!c.moveToFirst()) return result;
+            result.put("id", c.getString(0)); result.put("name", c.getString(1));
+            result.put("description", c.getString(2)); result.put("status", c.getString(3));
+            result.put("created_at", c.getLong(4)); result.put("updated_at", c.getLong(5));
+            JSONArray files = new JSONArray();
+            try (Cursor f = db.rawQuery("SELECT id,display_name,mime_type,size_bytes,added_at FROM project_files WHERE project_id=? ORDER BY added_at DESC", new String[]{projectId})) {
+                while (f.moveToNext()) {
+                    JSONObject item = new JSONObject();
+                    item.put("id", f.getString(0)); item.put("name", f.getString(1));
+                    item.put("mime_type", f.getString(2)); item.put("size_bytes", f.getLong(3));
+                    item.put("added_at", f.getLong(4)); files.put(item);
+                }
+            }
+            JSONArray notes = new JSONArray();
+            try (Cursor n = db.rawQuery("SELECT id,title,body,created_at,updated_at FROM project_notes WHERE project_id=? ORDER BY updated_at DESC", new String[]{projectId})) {
+                while (n.moveToNext()) {
+                    JSONObject item = new JSONObject();
+                    item.put("id", n.getString(0)); item.put("title", n.getString(1));
+                    item.put("body", n.getString(2)); item.put("created_at", n.getLong(3));
+                    item.put("updated_at", n.getLong(4)); notes.put(item);
+                }
+            }
+            result.put("files", files); result.put("notes", notes);
+        } catch (Exception ignored) { }
+        return result;
+    }
+
+    public synchronized boolean addProjectFile(String projectId, String fileId, String displayName, String relativePath, String mimeType, long sizeBytes) {
+        if (projectId == null || fileId == null || relativePath == null || displayName == null) return false;
+        android.content.ContentValues values = new android.content.ContentValues();
+        values.put("id", fileId); values.put("project_id", projectId); values.put("display_name", displayName);
+        values.put("relative_path", relativePath); values.put("mime_type", mimeType == null ? "application/octet-stream" : mimeType);
+        values.put("size_bytes", sizeBytes); values.put("added_at", System.currentTimeMillis());
+        boolean saved = getWritableDatabase().insert("project_files", null, values) != -1;
+        if (saved) touchProject(projectId);
+        return saved;
+    }
+
+    public synchronized String getProjectFilePath(String fileId) {
+        try (Cursor c = getReadableDatabase().rawQuery("SELECT relative_path FROM project_files WHERE id=?", new String[]{fileId})) {
+            return c.moveToFirst() ? c.getString(0) : null;
+        }
+    }
+
+    public synchronized boolean deleteProjectFile(String fileId) {
+        SQLiteDatabase db = getWritableDatabase();
+        String projectId = null;
+        try (Cursor c = db.rawQuery("SELECT project_id FROM project_files WHERE id=?", new String[]{fileId})) {
+            if (c.moveToFirst()) projectId = c.getString(0);
+        }
+        int removed = db.delete("project_files", "id=?", new String[]{fileId});
+        if (removed > 0 && projectId != null) touchProject(projectId);
+        return removed > 0;
+    }
+
+    public synchronized boolean addProjectNote(String projectId, String title, String body) {
+        if (projectId == null || title == null || body == null || title.trim().isEmpty()) return false;
+        if (title.trim().length() > 120 || body.length() > 10000) return false;
+        long now = System.currentTimeMillis();
+        android.content.ContentValues values = new android.content.ContentValues();
+        values.put("id", UUID.randomUUID().toString()); values.put("project_id", projectId);
+        values.put("title", title.trim()); values.put("body", body.trim());
+        values.put("created_at", now); values.put("updated_at", now);
+        boolean saved = getWritableDatabase().insert("project_notes", null, values) != -1;
+        if (saved) touchProject(projectId);
+        return saved;
+    }
+
+    private void touchProject(String projectId) {
+        android.content.ContentValues values = new android.content.ContentValues();
+        values.put("updated_at", System.currentTimeMillis());
+        getWritableDatabase().update("projects", values, "id=?", new String[]{projectId});
     }
 
     public synchronized JSONArray listProjects() {
