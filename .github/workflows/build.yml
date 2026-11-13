@@ -1,7 +1,10 @@
-name: Build Byte Overlay Test APK
+name: Build Byte Shared Conversation Spike APK
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - byte-shared-conversation-spike
 
 jobs:
   build-shell:
@@ -27,6 +30,6 @@ jobs:
       - name: Upload Byte overlay test APK
         uses: actions/upload-artifact@v4
         with:
-          name: byte-overlay-test-apk
+          name: byte-shared-conversation-spike-apk
           path: src/shell_apk/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
