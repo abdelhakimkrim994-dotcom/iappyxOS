@@ -92,6 +92,34 @@ public final class ByteOverlayTestActivity extends Activity {
         }
 
         @JavascriptInterface
+        public String getProjectsJson() {
+            ProjectRepository repository = new ProjectRepository(ByteOverlayTestActivity.this);
+            try { return repository.listProjects().toString(); }
+            finally { repository.close(); }
+        }
+
+        @JavascriptInterface
+        public boolean createProject(String name, String description) {
+            ProjectRepository repository = new ProjectRepository(ByteOverlayTestActivity.this);
+            try { return repository.createProject(name, description); }
+            finally { repository.close(); }
+        }
+
+        @JavascriptInterface
+        public boolean updateProject(String id, String name, String description, String status) {
+            ProjectRepository repository = new ProjectRepository(ByteOverlayTestActivity.this);
+            try { return repository.updateProject(id, name, description, status); }
+            finally { repository.close(); }
+        }
+
+        @JavascriptInterface
+        public boolean deleteProject(String id) {
+            ProjectRepository repository = new ProjectRepository(ByteOverlayTestActivity.this);
+            try { return repository.deleteProject(id); }
+            finally { repository.close(); }
+        }
+
+        @JavascriptInterface
         public boolean toggleByteOverlay() {
             try {
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M

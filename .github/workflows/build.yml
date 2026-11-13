@@ -1,10 +1,11 @@
-name: Build Byte Shared Conversation Spike APK
+name: Build Byte Project Library Foundation APK
 
 on:
   workflow_dispatch:
   push:
     branches:
       - byte-shared-conversation-spike
+      - byte-project-library-foundation
 
 jobs:
   build-shell:
@@ -27,9 +28,9 @@ jobs:
         working-directory: src/shell_apk
         run: ./gradlew assembleRelease
 
-      - name: Upload Byte overlay test APK
+      - name: Upload Byte project library foundation APK
         uses: actions/upload-artifact@v4
         with:
-          name: byte-shared-conversation-spike-apk
+          name: byte-project-library-foundation-apk
           path: src/shell_apk/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error

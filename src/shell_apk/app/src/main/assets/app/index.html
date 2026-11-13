@@ -490,6 +490,25 @@ button {
   white-space:nowrap;  
 }  
   
+
+/* PROJECT LIBRARY */
+.projects-screen{position:absolute;inset:0;z-index:10;background:var(--bg);display:none;flex-direction:column;padding:env(safe-area-inset-top) 16px max(16px,env(safe-area-inset-bottom));overflow-y:auto}
+.projects-screen.open{display:flex}
+.projects-head{display:flex;align-items:center;gap:12px;padding:14px 0 18px;border-bottom:1px solid #ffffff12}
+.projects-head h2{font-size:20px;flex:1}
+.projects-back,.projects-add{height:42px;padding:0 14px;border-radius:13px;background:var(--surface2);color:var(--cyan)}
+.projects-intro{color:var(--muted);font-size:12px;line-height:1.5;padding:14px 0}
+.project-form{display:none;background:var(--surface);border:1px solid #36c9d833;border-radius:16px;padding:14px;margin-bottom:14px;gap:10px;flex-direction:column}
+.project-form.open{display:flex}
+.project-form input,.project-form textarea{width:100%;background:var(--surface2);border:1px solid #ffffff18;border-radius:11px;padding:12px;color:var(--text);outline:none;font:inherit;font-size:13px}
+.project-form textarea{min-height:76px;resize:vertical}
+.project-form button{height:44px;border-radius:22px;background:var(--cyan);color:#102333;font-weight:700}
+.project-list{display:flex;flex-direction:column;gap:10px;padding-bottom:24px}
+.project-card{background:var(--surface);border:1px solid #ffffff10;border-radius:15px;padding:15px;text-align:left;width:100%}
+.project-card strong{display:block;font-size:15px;margin-bottom:5px}
+.project-card p{font-size:12px;color:var(--muted);line-height:1.45}
+.project-meta{display:flex;justify-content:space-between;color:var(--cyan);font-size:10px;margin-top:12px}
+.project-empty{text-align:center;color:var(--muted);font-size:13px;padding:35px 15px;line-height:1.6}
 </style>  </head>  <body>  <div class="app">    <div class="header">  
     <div class="brand">  
       <div class="brand-icon">✦</div>  
@@ -571,7 +590,22 @@ button {
 
   </div>    <div class="footer-note">  
     BYTE · SHARED CONVERSATION  
-  </div>    <div class="toast" id="toast"></div>  </div>  <script>
+  </div>    <div class="toast" id="toast"></div>
+<div class="projects-screen" id="projectsScreen" aria-label="Project library">
+  <div class="projects-head">
+    <button class="projects-back" onclick="closeProjects()">← Back</button>
+    <h2>My Projects</h2>
+    <button class="projects-add" onclick="toggleProjectForm()">＋ New</button>
+  </div>
+  <p class="projects-intro">Your work, files and important information — kept together on this device.</p>
+  <form class="project-form" id="projectForm" onsubmit="createProject(event)">
+    <input id="projectName" maxlength="80" placeholder="Project name" required>
+    <textarea id="projectDescription" maxlength="2000" placeholder="What is this project about? (optional)"></textarea>
+    <button type="submit">Create project</button>
+  </form>
+  <div class="project-list" id="projectList"><div class="project-empty">Loading your projects…</div></div>
+</div>
+  </div>  <script>
 /* Both interfaces read and write through the same native conversation store. */
 var input = document.getElementById('userInput');
 var chat = document.getElementById('chat');
@@ -652,6 +686,62 @@ function toggleFloatingByte() {
 input.addEventListener('keydown', function(event) {
   if (event.key === 'Enter') sendMessage();
 });
+
+
+/* Local project catalog: project records are stored in the app-private SQLite database. */
+function openProjects() {
+  document.getElementById('projectsScreen').classList.add('open');
+  refreshProjects();
+}
+function closeProjects() {
+  document.getElementById('projectsScreen').classList.remove('open');
+}
+function toggleProjectForm() {
+  var form=document.getElementById('projectForm');
+  form.classList.toggle('open');
+  if(form.classList.contains('open')) document.getElementById('projectName').focus();
+}
+function refreshProjects() {
+  var b=bridge(), list=document.getElementById('projectList');
+  if(!b || typeof b.getProjectsJson!=='function') {
+    list.innerHTML='<div class="project-empty">Project storage is unavailable in this build.</div>'; return;
+  }
+  try {
+    var projects=JSON.parse(b.getProjectsJson()||'[]');
+    if(!projects.length) {
+      list.innerHTML='<div class="project-empty">No projects yet.<br>Create your first project to give Byte something to organize. 🤖</div>'; return;
+    }
+    list.innerHTML='';
+    projects.forEach(function(p) {
+      var card=document.createElement('button');
+      card.className='project-card';
+      var name=document.createElement('strong'); name.textContent=p.name;
+      var desc=document.createElement('p'); desc.textContent=p.description||'No description yet.';
+      var meta=document.createElement('div'); meta.className='project-meta';
+      var status=document.createElement('span'); status.textContent=p.status==='archived'?'ARCHIVED':'ACTIVE';
+      var date=document.createElement('span'); date.textContent='Updated '+new Date(p.updated_at).toLocaleDateString();
+      meta.appendChild(status); meta.appendChild(date);
+      card.appendChild(name); card.appendChild(desc); card.appendChild(meta);
+      card.addEventListener('click',function(){showToast('Project details and file imports are the next step.');});
+      list.appendChild(card);
+    });
+  } catch(e) { list.innerHTML='<div class="project-empty">Could not load projects.</div>'; }
+}
+function createProject(event) {
+  event.preventDefault();
+  var name=document.getElementById('projectName').value.trim();
+  var description=document.getElementById('projectDescription').value.trim();
+  var b=bridge();
+  if(!name || !b || typeof b.createProject!=='function') { showToast('Could not create project.'); return; }
+  try {
+    if(b.createProject(name,description)) {
+      document.getElementById('projectForm').reset();
+      document.getElementById('projectForm').classList.remove('open');
+      refreshProjects();
+      showToast('Project created and saved on this device.');
+    } else showToast('Check the project name and try again.');
+  } catch(e) { showToast('Project could not be saved.'); }
+}
 
 function showToast(message) {
   var toast = document.getElementById('toast');
