@@ -533,6 +533,14 @@ button {
 .workspace-note p{font-size:12px;color:#c4c9d5;line-height:1.5;margin-top:7px;white-space:pre-wrap;overflow-wrap:anywhere}
 .workspace-empty{padding:18px 13px;border:1px dashed #ffffff20;border-radius:13px;text-align:center;color:var(--muted);font-size:12px;line-height:1.5}
 .workspace-hint{font-size:10px;color:var(--muted);line-height:1.5;margin-top:8px}
+.project-search{display:flex;gap:8px;margin:10px 0}
+.project-search input{flex:1;min-width:0;background:#10101d;border:1px solid #ffffff18;border-radius:10px;padding:12px;color:#eaeaea;font:inherit;font-size:13px}
+.project-search button{border:0;border-radius:10px;padding:0 15px;background:#0f3460;color:#fff;font-weight:700}
+.workspace-search-result{padding:12px;margin-top:8px;border:1px solid #ffffff12;border-radius:11px;background:#151526}
+.workspace-search-result strong{display:block;font-size:12px;margin-bottom:6px;color:#4FC3F7}
+.workspace-search-result p{font-size:12px;line-height:1.5;color:#eaeaea;overflow-wrap:anywhere}
+.workspace-search-results .workspace-empty{margin-top:8px}
+
 
 </style>  </head>  <body>  <div class="app">    <div class="header">  
     <div class="brand">  
@@ -643,6 +651,14 @@ button {
         <button class="workspace-secondary" onclick="toggleNoteForm()">＋ Add note</button>
       </div>
     </div>
+    <section class="workspace-section">
+      <div class="workspace-section-head"><h3>Ask this project</h3><span class="workspace-count">LOCAL SEARCH</span></div>
+      <div class="project-search">
+        <input id="projectSearchInput" type="search" maxlength="120" placeholder="Search words in this project's files…">
+        <button type="button" onclick="searchActiveProject()">Search</button>
+      </div>
+      <div id="projectSearchResults" class="workspace-search-results"><div class="workspace-hint">Search checks text extracted from this project's files. Nothing is sent to an AI service.</div></div>
+    </section>
     <section class="workspace-section">
       <div class="workspace-section-head"><h3>Files</h3><span class="workspace-count" id="workspaceFileCount">0 files</span></div>
       <div id="workspaceFiles"></div>
@@ -843,7 +859,8 @@ function refreshProjectWorkspace() {
       var ico=document.createElement('div'); ico.className='workspace-file-icon'; ico.textContent=fileIcon(file.name);
       var info=document.createElement('div'); info.className='workspace-file-info';
       var title=document.createElement('strong'); title.textContent=file.name;
-      var sub=document.createElement('small'); sub.textContent=formatBytes(file.size_bytes)+' · '+new Date(file.added_at).toLocaleDateString();
+      var stateLabel = file.extraction_status==='indexed' ? ' · searchable' : file.extraction_status==='unsupported' ? ' · not text' : file.extraction_status==='too_large' ? ' · too large to index' : file.extraction_status==='error' ? ' · could not read' : ' · not indexed';
+      var sub=document.createElement('small'); sub.textContent=formatBytes(file.size_bytes)+' · '+new Date(file.added_at).toLocaleDateString()+stateLabel;
       info.appendChild(title); info.appendChild(sub);
       var del=document.createElement('button'); del.className='workspace-delete'; del.textContent='×'; del.setAttribute('aria-label','Remove '+file.name);
       del.addEventListener('click',function(){removeWorkspaceFile(file.id,file.name);});
@@ -903,6 +920,34 @@ function saveProjectNote(event) {
     } else showToast('Check the note and try again.');
   } catch(e) { showToast('Note could not be saved.'); }
 }
+function searchActiveProject() {
+  var query=document.getElementById('projectSearchInput').value.trim();
+  var box=document.getElementById('projectSearchResults');
+  var b=bridge();
+  if(!activeProjectId || !query || query.length<2) {
+    box.innerHTML='<div class="workspace-empty">Enter at least 2 characters to search.</div>'; return;
+  }
+  if(!b || typeof b.searchProjectFilesJson!=='function') {
+    box.innerHTML='<div class="workspace-empty">Project search is unavailable in this build.</div>'; return;
+  }
+  try {
+    var results=JSON.parse(b.searchProjectFilesJson(activeProjectId,query)||'[]');
+    box.innerHTML='';
+    if(!results.length) {
+      box.innerHTML='<div class="workspace-empty">No matches found in this project’s indexed text files.</div>'; return;
+    }
+    results.forEach(function(result) {
+      var card=document.createElement('article'); card.className='workspace-search-result';
+      var name=document.createElement('strong'); name.textContent=result.name;
+      var snippet=document.createElement('p'); snippet.textContent=result.snippet;
+      card.appendChild(name); card.appendChild(snippet); box.appendChild(card);
+    });
+  } catch(e) { box.innerHTML='<div class="workspace-empty">Could not search this project.</div>'; }
+}
+document.getElementById('projectSearchInput').addEventListener('keydown',function(event){
+  if(event.key==='Enter') searchActiveProject();
+});
+
 function removeWorkspaceFile(fileId,name) {
   var b=bridge();
   if(!b||typeof b.deleteProjectFile!=='function') { showToast('Could not remove this file.'); return; }
