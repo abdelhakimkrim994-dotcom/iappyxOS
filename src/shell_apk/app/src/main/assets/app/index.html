@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Byte Overlay Test 01</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#0d0d1a;color:#eaeaea;font:16px -apple-system,sans-serif;display:flex;align-items:center;justify-content:center;padding:22px}
+main{width:100%;max-width:440px;background:#1a1a2e;border:1px solid #263d5b;border-radius:18px;padding:22px}
+.robot{font-size:56px;text-align:center;margin:8px 0}
+h1{text-align:center;margin:8px 0;color:#4FC3F7}
+p{line-height:1.5;color:#c5cbd6;text-align:center}
+button{width:100%;min-height:50px;border:0;border-radius:25px;margin-top:12px;background:#0f3460;color:white;font:600 16px inherit}
+button.primary{background:#087e9b}
+#status{min-height:48px;margin-top:16px;padding:12px;border-radius:10px;background:#101a2a;font-size:14px;text-align:center}
+small{display:block;color:#8995a8;text-align:center;margin-top:14px;line-height:1.4}
+</style>
+</head>
+<body>
+<main>
+<div class="robot">🤖</div>
+<h1>Byte Overlay Test 01</h1>
+<p>This temporary test checks whether Android allows Byte's small floating bubble to appear above other apps.</p>
+<button class="primary" onclick="checkPermission()">1. Check overlay permission</button>
+<button onclick="showOverlay()">2. Show floating Byte</button>
+<button onclick="hideOverlay()">3. Hide floating Byte</button>
+<div id="status">Waiting for your test.</div>
+<small>After showing Byte, press Home or open another app. Tap the × on the bubble to close it.</small>
+</main>
+<script>
+const statusEl=document.getElementById('status');
+function say(s){statusEl.textContent=s;}
+function bridge(){return window.iappyxIntent||null;}
+function checkPermission(){
+ const b=bridge();
+ if(!b){say('Bridge not available. Please check that this page is running inside the iappyxOS shell.');return;}
+ try{
+  if(b.hasOverlayPermission()){say('Permission is already granted. Tap “Show floating Byte”.');}
+  else{say('Permission is not granted. Opening Android overlay settings…');b.requestOverlayPermission();}
+ }catch(e){say('Permission check failed: '+e);}
+}
+function showOverlay(){
+ const b=bridge();
+ if(!b){say('iappyxIntent bridge not available.');return;}
+ try{
+  if(!b.hasOverlayPermission()){say('Please grant “Display over other apps” permission first, then return and tap Show again.');b.requestOverlayPermission();return;}
+  const ok=b.showByteOverlay();
+  say(ok?'Android accepted the request. Press Home or open another app to test the floating bubble.':'Android did not start the overlay service. Check permission and try again.');
+ }catch(e){say('Could not show overlay: '+e);}
+}
+function hideOverlay(){
+ const b=bridge();
+ if(!b){say('iappyxIntent bridge not available.');return;}
+ try{say(b.hideByteOverlay()?'Overlay service stopped.':'Overlay was not running.');}catch(e){say('Could not hide overlay: '+e);}
+}
+</script>
+</body>
+</html>
