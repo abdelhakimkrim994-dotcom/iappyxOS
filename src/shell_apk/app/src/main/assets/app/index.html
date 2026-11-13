@@ -31,7 +31,7 @@ small{display:block;color:#8995a8;text-align:center;margin-top:14px;line-height:
 <script>
 const statusEl=document.getElementById('status');
 function say(s){statusEl.textContent=s;}
-function bridge(){return window.iappyxIntent||null;}
+function bridge(){return window.byteOverlay||null;}
 function checkPermission(){
  const b=bridge();
  if(!b){say('Bridge not available. Please check that this page is running inside the iappyxOS shell.');return;}
