@@ -7,10 +7,10 @@ android {
     compileSdk 35
 
     defaultConfig {
-        applicationId "com.iappyx.generated.placeholderx.xxxxxxxx.projectlibrarytest"
+        applicationId "com.iappyx.generated.placeholderx.xxxxxxxx.projectworkspacetest"
         minSdk 26
         targetSdk 35
-        versionCode 6
+        versionCode 1
         versionName "1.5-project-workspaces"
     }
 
