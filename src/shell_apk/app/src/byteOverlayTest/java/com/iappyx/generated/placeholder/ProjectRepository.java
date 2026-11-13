@@ -11,7 +11,7 @@ import java.util.UUID;
 /** Local, app-private project catalog. File bytes will live in a separate private directory. */
 public final class ProjectRepository extends SQLiteOpenHelper {
     private static final String DB_NAME = "byte_projects.db";
-    private static final int DB_VERSION = 2;
+    private static final int DB_VERSION = 3;
 
     public ProjectRepository(Context context) {
         super(context.getApplicationContext(), DB_NAME, null, DB_VERSION);
@@ -29,6 +29,7 @@ public final class ProjectRepository extends SQLiteOpenHelper {
                 "id TEXT PRIMARY KEY, project_id TEXT NOT NULL, display_name TEXT NOT NULL, " +
                 "relative_path TEXT NOT NULL, mime_type TEXT NOT NULL DEFAULT 'application/octet-stream', " +
                 "size_bytes INTEGER NOT NULL DEFAULT 0, added_at INTEGER NOT NULL, " +
+                "extraction_status TEXT NOT NULL DEFAULT 'pending', extracted_text TEXT NOT NULL DEFAULT '', " +
                 "FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE)");
         db.execSQL("CREATE INDEX idx_project_notes_project ON project_notes(project_id)");
         db.execSQL("CREATE INDEX idx_project_files_project ON project_files(project_id)");
@@ -36,7 +37,10 @@ public final class ProjectRepository extends SQLiteOpenHelper {
     }
 
     @Override public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // Version 2 uses the existing notes and file metadata tables; no destructive migration.
+        if (oldVersion < 3) {
+            db.execSQL("ALTER TABLE project_files ADD COLUMN extraction_status TEXT NOT NULL DEFAULT 'pending'");
+            db.execSQL("ALTER TABLE project_files ADD COLUMN extracted_text TEXT NOT NULL DEFAULT ''");
+        }
     }
 
     public synchronized JSONObject getProjectDetails(String projectId) {
@@ -48,12 +52,13 @@ public final class ProjectRepository extends SQLiteOpenHelper {
             result.put("description", c.getString(2)); result.put("status", c.getString(3));
             result.put("created_at", c.getLong(4)); result.put("updated_at", c.getLong(5));
             JSONArray files = new JSONArray();
-            try (Cursor f = db.rawQuery("SELECT id,display_name,mime_type,size_bytes,added_at FROM project_files WHERE project_id=? ORDER BY added_at DESC", new String[]{projectId})) {
+            try (Cursor f = db.rawQuery("SELECT id,display_name,mime_type,size_bytes,added_at,extraction_status,extracted_text FROM project_files WHERE project_id=? ORDER BY added_at DESC", new String[]{projectId})) {
                 while (f.moveToNext()) {
                     JSONObject item = new JSONObject();
                     item.put("id", f.getString(0)); item.put("name", f.getString(1));
                     item.put("mime_type", f.getString(2)); item.put("size_bytes", f.getLong(3));
-                    item.put("added_at", f.getLong(4)); files.put(item);
+                    item.put("added_at", f.getLong(4)); item.put("extraction_status", f.getString(5));
+                    item.put("indexed_chars", f.getString(6) == null ? 0 : f.getString(6).length()); files.put(item);
                 }
             }
             JSONArray notes = new JSONArray();
@@ -109,6 +114,43 @@ public final class ProjectRepository extends SQLiteOpenHelper {
         boolean saved = getWritableDatabase().insert("project_notes", null, values) != -1;
         if (saved) touchProject(projectId);
         return saved;
+    }
+
+
+    public synchronized boolean updateFileExtraction(String fileId, String status, String text) {
+        if (fileId == null || status == null) return false;
+        android.content.ContentValues values = new android.content.ContentValues();
+        values.put("extraction_status", status);
+        values.put("extracted_text", text == null ? "" : text);
+        return getWritableDatabase().update("project_files", values, "id=?", new String[]{fileId}) > 0;
+    }
+
+    public synchronized JSONArray searchProjectFiles(String projectId, String query) {
+        JSONArray results = new JSONArray();
+        if (projectId == null || query == null) return results;
+        String term = query.trim();
+        if (term.length() < 2 || term.length() > 120) return results;
+        String needle = term.toLowerCase(java.util.Locale.ROOT);
+        try (Cursor c = getReadableDatabase().rawQuery(
+                "SELECT display_name,extracted_text FROM project_files WHERE project_id=? AND extraction_status='indexed' AND instr(lower(extracted_text), lower(?))>0 ORDER BY added_at DESC LIMIT 30",
+                new String[]{projectId, term})) {
+            while (c.moveToNext()) {
+                String name = c.getString(0);
+                String content = c.getString(1);
+                String lower = content == null ? "" : content.toLowerCase(java.util.Locale.ROOT);
+                int at = lower.indexOf(needle);
+                int start = Math.max(0, at - 100);
+                int end = Math.min(content.length(), at + term.length() + 160);
+                String snippet = content.substring(start, end).replaceAll("\\s+", " ").trim();
+                if (start > 0) snippet = "… " + snippet;
+                if (end < content.length()) snippet += " …";
+                JSONObject item = new JSONObject();
+                item.put("name", name);
+                item.put("snippet", snippet);
+                results.put(item);
+            }
+        } catch (Exception ignored) { }
+        return results;
     }
 
     private void touchProject(String projectId) {
