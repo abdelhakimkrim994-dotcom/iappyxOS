@@ -117,6 +117,24 @@ public final class ProjectRepository extends SQLiteOpenHelper {
     }
 
 
+
+    public synchronized JSONArray getPendingProjectFiles(String projectId) {
+        JSONArray result = new JSONArray();
+        if (projectId == null) return result;
+        try (Cursor c = getReadableDatabase().rawQuery(
+                "SELECT id,display_name,relative_path FROM project_files WHERE project_id=? AND extraction_status='pending'",
+                new String[]{projectId})) {
+            while (c.moveToNext()) {
+                JSONObject item = new JSONObject();
+                item.put("id", c.getString(0));
+                item.put("name", c.getString(1));
+                item.put("path", c.getString(2));
+                result.put(item);
+            }
+        } catch (Exception ignored) { }
+        return result;
+    }
+
     public synchronized boolean updateFileExtraction(String fileId, String status, String text) {
         if (fileId == null || status == null) return false;
         android.content.ContentValues values = new android.content.ContentValues();
