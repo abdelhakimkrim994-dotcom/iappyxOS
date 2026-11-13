@@ -80,6 +80,33 @@ public final class ByteOverlayTestActivity extends Activity {
                 return false;
             }
         }
+
+        @JavascriptInterface
+        public String getMessagesJson() {
+            return ConversationManager.getMessagesJson(ByteOverlayTestActivity.this);
+        }
+
+        @JavascriptInterface
+        public boolean sendMessage(String message) {
+            return ConversationManager.send(ByteOverlayTestActivity.this, message);
+        }
+
+        @JavascriptInterface
+        public boolean toggleByteOverlay() {
+            try {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M
+                        && !Settings.canDrawOverlays(ByteOverlayTestActivity.this)) {
+                    requestOverlayPermission();
+                    return false;
+                }
+                boolean stopped = stopService(new Intent(ByteOverlayTestActivity.this, OverlayTestService.class));
+                if (stopped) return false;
+                startService(new Intent(ByteOverlayTestActivity.this, OverlayTestService.class));
+                return true;
+            } catch (Exception ignored) {
+                return false;
+            }
+        }
     }
 
     @Override
