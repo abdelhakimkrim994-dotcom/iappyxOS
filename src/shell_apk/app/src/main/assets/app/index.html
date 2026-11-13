@@ -34,7 +34,7 @@ function say(s){statusEl.textContent=s;}
 function bridge(){return window.byteOverlay||null;}
 function checkPermission(){
  const b=bridge();
- if(!b){say('Bridge not available. Please check that this page is running inside the iappyxOS shell.');return;}
+ if(!b){say('Bridge not available. Please check that this page is running inside the Byte test app.');return;}
  try{
   if(b.hasOverlayPermission()){say('Permission is already granted. Tap “Show floating Byte”.');}
   else{say('Permission is not granted. Opening Android overlay settings…');b.requestOverlayPermission();}
@@ -42,7 +42,7 @@ function checkPermission(){
 }
 function showOverlay(){
  const b=bridge();
- if(!b){say('iappyxIntent bridge not available.');return;}
+ if(!b){say('Byte overlay bridge not available.');return;}
  try{
   if(!b.hasOverlayPermission()){say('Please grant “Display over other apps” permission first, then return and tap Show again.');b.requestOverlayPermission();return;}
   const ok=b.showByteOverlay();
@@ -51,7 +51,7 @@ function showOverlay(){
 }
 function hideOverlay(){
  const b=bridge();
- if(!b){say('iappyxIntent bridge not available.');return;}
+ if(!b){say('Byte overlay bridge not available.');return;}
  try{say(b.hideByteOverlay()?'Overlay service stopped.':'Overlay was not running.');}catch(e){say('Could not hide overlay: '+e);}
 }
 </script>
