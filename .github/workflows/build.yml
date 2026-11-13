@@ -1,4 +1,4 @@
-name: Build Byte Project Library Foundation APK
+name: Build Byte Project Workspaces APK
 
 on:
   workflow_dispatch:
@@ -6,6 +6,7 @@ on:
     branches:
       - byte-shared-conversation-spike
       - byte-project-library-foundation
+      - byte-project-workspaces
 
 jobs:
   build-shell:
@@ -31,6 +32,6 @@ jobs:
       - name: Upload Byte project library foundation APK
         uses: actions/upload-artifact@v4
         with:
-          name: byte-project-library-foundation-apk
+          name: byte-project-workspaces-apk
           path: src/shell_apk/app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
