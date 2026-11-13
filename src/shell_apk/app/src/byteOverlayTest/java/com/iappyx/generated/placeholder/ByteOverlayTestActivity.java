@@ -132,8 +132,10 @@ public final class ByteOverlayTestActivity extends Activity {
         @JavascriptInterface
         public String getProjectDetailsJson(String projectId) {
             ProjectRepository repo = new ProjectRepository(ByteOverlayTestActivity.this);
-            try { return repo.getProjectDetails(projectId).toString(); }
-            finally { repo.close(); }
+            try {
+                indexPendingProjectFiles(repo, projectId);
+                return repo.getProjectDetails(projectId).toString();
+            } finally { repo.close(); }
         }
 
         @JavascriptInterface
@@ -174,6 +176,29 @@ public final class ByteOverlayTestActivity extends Activity {
         }
     }
 
+
+    private void indexPendingProjectFiles(ProjectRepository repo, String projectId) {
+        org.json.JSONArray pending = repo.getPendingProjectFiles(projectId);
+        File root = new File(getFilesDir(), "projects");
+        for (int i = 0; i < pending.length(); i++) {
+            org.json.JSONObject item = pending.optJSONObject(i);
+            if (item == null) continue;
+            String id = item.optString("id", "");
+            String name = item.optString("name", "");
+            String relative = item.optString("path", "");
+            try {
+                File target = new File(root, relative);
+                if (!target.getCanonicalPath().startsWith(root.getCanonicalPath() + File.separator)) {
+                    repo.updateFileExtraction(id, "error", "");
+                    continue;
+                }
+                ProjectTextExtractor.Result extracted = ProjectTextExtractor.extract(target, name);
+                repo.updateFileExtraction(id, extracted.status, extracted.text);
+            } catch (Exception ignored) {
+                repo.updateFileExtraction(id, "error", "");
+            }
+        }
+    }
 
     private boolean runPickerOnUiThread(String projectId) {
         if (projectId == null || projectId.trim().isEmpty()) return false;
