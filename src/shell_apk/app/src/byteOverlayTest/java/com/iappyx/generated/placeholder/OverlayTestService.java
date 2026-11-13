@@ -23,10 +23,8 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 /**
- * Isolated keyboard feasibility spike.
- * Tests whether an application overlay can become focusable, accept text,
- * show the Android IME, and return to a non-focusable floating robot state.
- * Messages are local echo-only test data; there is no AI or persistence.
+ * Floating Byte surface backed by the same persistent conversation repository
+ * used by the full-screen WebView. Replies remain local demo responses in this spike.
  */
 public final class OverlayTestService extends Service {
     private WindowManager windowManager;
@@ -261,7 +259,7 @@ public final class OverlayTestService extends Service {
                 String role = item.optString("role", "assistant");
                 String body = item.optString("text", "");
                 text.append("user".equals(role) ? "You: " : "Byte: ");
-                text.append(body).append("\\n\\n");
+                text.append(body).append("\n\n");
             }
             transcript.setText(text.toString());
             if (historyScroll != null) historyScroll.post(() -> historyScroll.fullScroll(View.FOCUS_DOWN));
