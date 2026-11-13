@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Byte Overlay Test 01</title>
+<title>Byte V0.2 — Floating Companion</title>
 <style>
 :root{color-scheme:dark}*{box-sizing:border-box}
 body{margin:0;min-height:100vh;background:#0d0d1a;color:#eaeaea;font:16px -apple-system,sans-serif;display:flex;align-items:center;justify-content:center;padding:22px}
@@ -20,13 +20,13 @@ small{display:block;color:#8995a8;text-align:center;margin-top:14px;line-height:
 <body>
 <main>
 <div class="robot">🤖</div>
-<h1>Byte Overlay Test 01</h1>
-<p>This temporary test checks whether Android allows Byte's small floating bubble to appear above other apps.</p>
+<h1>Byte V0.2</h1>
+<p>Your floating 2D robot companion can appear above other apps. Tap Byte to open the companion panel, or drag the robot to move it.</p>
 <button class="primary" onclick="checkPermission()">1. Check overlay permission</button>
 <button onclick="showOverlay()">2. Show floating Byte</button>
 <button onclick="hideOverlay()">3. Hide floating Byte</button>
 <div id="status">Waiting for your test.</div>
-<small>After showing Byte, press Home or open another app. Tap the × on the bubble to close it.</small>
+<small>After showing Byte, press Home or open another app. Tap the robot to open or close its panel. Use Hide floating Byte here to stop the overlay.</small>
 </main>
 <script>
 const statusEl=document.getElementById('status');
