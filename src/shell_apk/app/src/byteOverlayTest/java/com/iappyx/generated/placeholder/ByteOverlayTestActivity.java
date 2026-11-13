@@ -140,6 +140,13 @@ public final class ByteOverlayTestActivity extends Activity {
         public boolean pickProjectFiles(String projectId) { return runPickerOnUiThread(projectId); }
 
         @JavascriptInterface
+        public String searchProjectFilesJson(String projectId, String query) {
+            ProjectRepository repo = new ProjectRepository(ByteOverlayTestActivity.this);
+            try { return repo.searchProjectFiles(projectId, query).toString(); }
+            finally { repo.close(); }
+        }
+
+        @JavascriptInterface
         public boolean addProjectNote(String projectId, String title, String body) {
             ProjectRepository repo = new ProjectRepository(ByteOverlayTestActivity.this);
             try { return repo.addProjectNote(projectId, title, body); }
@@ -243,8 +250,13 @@ public final class ByteOverlayTestActivity extends Activity {
             out.flush();
             ProjectRepository repo = new ProjectRepository(this);
             boolean saved;
-            try { saved = repo.addProjectFile(projectId, fileId, displayName, projectId + "/" + target.getName(), mimeType, copied); }
-            finally { repo.close(); }
+            try {
+                saved = repo.addProjectFile(projectId, fileId, displayName, projectId + "/" + target.getName(), mimeType, copied);
+                if (saved) {
+                    ProjectTextExtractor.Result extracted = ProjectTextExtractor.extract(target, displayName);
+                    repo.updateFileExtraction(fileId, extracted.status, extracted.text);
+                }
+            } finally { repo.close(); }
             if (!saved) target.delete();
             return saved;
         } catch (Exception ignored) { target.delete(); return false; }
