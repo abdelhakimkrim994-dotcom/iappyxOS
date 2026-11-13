@@ -9498,6 +9498,32 @@ public class ShellActivity extends ComponentActivity {
         }
 
         @JavascriptInterface
+        public boolean showByteOverlay() {
+            if (android.os.Build.VERSION.SDK_INT >= 23
+                    && !android.provider.Settings.canDrawOverlays(ShellActivity.this)) {
+                return false;
+            }
+            try {
+                Intent intent = new Intent(ShellActivity.this, OverlayTestService.class);
+                startService(intent);
+                return true;
+            } catch (Exception e) {
+                Log.w("iappyxOS", "showByteOverlay: " + e.getMessage());
+                return false;
+            }
+        }
+
+        @JavascriptInterface
+        public boolean hideByteOverlay() {
+            try {
+                return stopService(new Intent(ShellActivity.this, OverlayTestService.class));
+            } catch (Exception e) {
+                Log.w("iappyxOS", "hideByteOverlay: " + e.getMessage());
+                return false;
+            }
+        }
+
+        @JavascriptInterface
         public boolean hasOverlayPermission() {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true;
             return android.provider.Settings.canDrawOverlays(ShellActivity.this);
