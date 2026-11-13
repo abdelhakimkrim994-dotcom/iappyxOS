@@ -1,59 +1,667 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>Byte V0.2 — Floating Companion</title>
-<style>
-:root{color-scheme:dark}*{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:#0d0d1a;color:#eaeaea;font:16px -apple-system,sans-serif;display:flex;align-items:center;justify-content:center;padding:22px}
-main{width:100%;max-width:440px;background:#1a1a2e;border:1px solid #263d5b;border-radius:18px;padding:22px}
-.robot{font-size:56px;text-align:center;margin:8px 0}
-h1{text-align:center;margin:8px 0;color:#4FC3F7}
-p{line-height:1.5;color:#c5cbd6;text-align:center}
-button{width:100%;min-height:50px;border:0;border-radius:25px;margin-top:12px;background:#0f3460;color:white;font:600 16px inherit}
-button.primary{background:#087e9b}
-#status{min-height:48px;margin-top:16px;padding:12px;border-radius:10px;background:#101a2a;font-size:14px;text-align:center}
-small{display:block;color:#8995a8;text-align:center;margin-top:14px;line-height:1.4}
-</style>
-</head>
-<body>
-<main>
-<div class="robot">🤖</div>
-<h1>Byte V0.2</h1>
-<p>Your floating 2D robot companion can appear above other apps. Tap Byte to open the companion panel, or drag the robot to move it.</p>
-<button class="primary" onclick="checkPermission()">1. Check overlay permission</button>
-<button onclick="showOverlay()">2. Show floating Byte</button>
-<button onclick="hideOverlay()">3. Hide floating Byte</button>
-<div id="status">Waiting for your test.</div>
-<small>After showing Byte, press Home or open another app. Tap the robot to open or close its panel. Use Hide floating Byte here to stop the overlay.</small>
-</main>
-<script>
-const statusEl=document.getElementById('status');
-function say(s){statusEl.textContent=s;}
-function bridge(){return window.byteOverlay||null;}
-function checkPermission(){
- const b=bridge();
- if(!b){say('Bridge not available. Please check that this page is running inside the Byte test app.');return;}
- try{
-  if(b.hasOverlayPermission()){say('Permission is already granted. Tap “Show floating Byte”.');}
-  else{say('Permission is not granted. Opening Android overlay settings…');b.requestOverlayPermission();}
- }catch(e){say('Permission check failed: '+e);}
+
+<!DOCTYPE html>  <html lang="en">  
+<head>  
+<meta charset="UTF-8">  
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">  
+<title>Byte - Your AI Companion</title>  <style>  
+* {  
+  margin:0;  
+  padding:0;  
+  box-sizing:border-box;  
+  -webkit-tap-highlight-color:transparent;  
+}  
+  
+:root {  
+  --bg:#0d0d1a;  
+  --surface:#1a1a2e;  
+  --surface2:#22243b;  
+  --cyan:#36c9d8;  
+  --blue:#0f3460;  
+  --white:#f4f6f8;  
+  --text:#eaeaea;  
+  --muted:#9298ad;  
+  --green:#69f0ae;  
+}  
+  
+body {  
+  background:var(--bg);  
+  color:var(--text);  
+  font-family:-apple-system,sans-serif;  
+  min-height:100dvh;  
+  overflow:hidden;  
+}  
+  
+button,input {  
+  font:inherit;  
+}  
+  
+button {  
+  border:0;  
+  cursor:pointer;  
+  color:inherit;  
+}  
+  
+.app {  
+  width:100%;  
+  max-width:600px;  
+  height:100dvh;  
+  margin:auto;  
+  display:flex;  
+  flex-direction:column;  
+  position:relative;  
+  overflow:hidden;  
+  background:  
+    radial-gradient(ellipse at 50% 20%,#172b45 0%,transparent 55%),  
+    var(--bg);  
+}  
+  
+/* HEADER */  
+  
+.header {  
+  height:65px;  
+  padding:0 18px;  
+  display:flex;  
+  align-items:center;  
+  justify-content:space-between;  
+  border-bottom:1px solid #ffffff0c;  
+  flex-shrink:0;  
+}  
+  
+.brand {  
+  display:flex;  
+  align-items:center;  
+  gap:10px;  
+}  
+  
+.brand-icon {  
+  width:38px;  
+  height:38px;  
+  background:var(--cyan);  
+  border-radius:13px;  
+  display:grid;  
+  place-items:center;  
+  color:#102233;  
+  font-size:22px;  
+}  
+  
+.brand-name {  
+  font-size:19px;  
+  font-weight:800;  
+  letter-spacing:.3px;  
+}  
+  
+.brand-sub {  
+  color:var(--muted);  
+  font-size:10px;  
+  margin-top:2px;  
+}  
+  
+.status {  
+  display:flex;  
+  align-items:center;  
+  gap:6px;  
+  color:var(--green);  
+  font-size:11px;  
+  background:#69f0ae12;  
+  padding:7px 10px;  
+  border-radius:30px;  
+}  
+  
+.status-dot {  
+  width:7px;  
+  height:7px;  
+  background:var(--green);  
+  border-radius:50%;  
+}  
+  
+/* ROBOT */  
+  
+.robot-area {  
+  padding:24px 20px 14px;  
+  display:flex;  
+  flex-direction:column;  
+  align-items:center;  
+  flex-shrink:0;  
+}  
+  
+.robot {  
+  width:148px;  
+  height:148px;  
+  position:relative;  
+  animation:float 3s ease-in-out infinite;  
+}  
+  
+@keyframes float {  
+  0%,100% {transform:translateY(0)}  
+  50% {transform:translateY(-8px)}  
+}  
+  
+.robot-shadow {  
+  position:absolute;  
+  bottom:0;  
+  left:28px;  
+  width:92px;  
+  height:13px;  
+  border-radius:50%;  
+  background:#0008;  
+  filter:blur(7px);  
+}  
+  
+.antenna {  
+  position:absolute;  
+  top:0;  
+  left:70px;  
+  width:7px;  
+  height:22px;  
+  background:#dce9ed;  
+  border-radius:5px;  
+}  
+  
+.antenna:before {  
+  content:"";  
+  position:absolute;  
+  width:13px;  
+  height:13px;  
+  background:var(--cyan);  
+  border-radius:50%;  
+  top:-7px;  
+  left:-3px;  
+  box-shadow:0 0 15px #36c9d899;  
+  animation:glow 2s infinite;  
+}  
+  
+@keyframes glow {  
+  50% {box-shadow:0 0 24px #36c9d8}  
+}  
+  
+.robot-body {  
+  position:absolute;  
+  width:124px;  
+  height:108px;  
+  left:12px;  
+  top:28px;  
+  border-radius:39px 39px 34px 34px;  
+  background:linear-gradient(145deg,#ffffff,#d9e4e9);  
+  border:4px solid #a8c4d1;  
+  box-shadow:0 12px 30px #0005,inset -5px -6px 12px #b4cbd3;  
+}  
+  
+.robot-ear {  
+  position:absolute;  
+  top:65px;  
+  width:17px;  
+  height:30px;  
+  background:var(--cyan);  
+  border:3px solid #d9e4e9;  
+  border-radius:10px;  
+}  
+  
+.robot-ear.left {left:1px}  
+.robot-ear.right {right:1px}  
+  
+.face {  
+  position:absolute;  
+  left:17px;  
+  top:25px;  
+  width:82px;  
+  height:57px;  
+  background:#17263b;  
+  border-radius:22px;  
+  display:flex;  
+  align-items:center;  
+  justify-content:center;  
+  gap:17px;  
+}  
+  
+.eye {  
+  width:13px;  
+  height:18px;  
+  background:#62e5ed;  
+  border-radius:50%;  
+  box-shadow:0 0 9px #36c9d899;  
+  animation:blink 5s infinite;  
+}  
+  
+@keyframes blink {  
+  0%,45%,49%,100% {transform:scaleY(1)}  
+  47% {transform:scaleY(.1)}  
+}  
+  
+.mouth {  
+  position:absolute;  
+  width:16px;  
+  height:7px;  
+  border-bottom:3px solid #62e5ed;  
+  border-radius:50%;  
+  bottom:9px;  
+  left:33px;  
+}  
+  
+.cheek {  
+  position:absolute;  
+  width:9px;  
+  height:5px;  
+  background:#ee9eaa;  
+  border-radius:50%;  
+  top:40px;  
+  opacity:.65;  
+}  
+  
+.cheek.left {left:8px}  
+.cheek.right {right:8px}  
+  
+.robot-arm {  
+  position:absolute;  
+  width:15px;  
+  height:37px;  
+  background:#e5eff2;  
+  border:3px solid #a8c4d1;  
+  border-radius:12px;  
+  top:85px;  
+}  
+  
+.robot-arm.left {  
+  left:5px;  
+  transform:rotate(18deg);  
+}  
+  
+.robot-arm.right {  
+  right:5px;  
+  transform:rotate(-18deg);  
+}  
+  
+.robot-label {  
+  margin-top:12px;  
+  font-size:12px;  
+  color:var(--cyan);  
+  font-weight:700;  
+  letter-spacing:1px;  
+}  
+  
+.greeting {  
+  text-align:center;  
+  margin-top:9px;  
+}  
+  
+.greeting h1 {  
+  font-size:22px;  
+  font-weight:800;  
+}  
+  
+.greeting p {  
+  font-size:12px;  
+  color:var(--muted);  
+  margin-top:5px;  
+}  
+  
+/* CHAT */  
+  
+.chat {  
+  flex:1;  
+  overflow-y:auto;  
+  padding:15px 17px 20px;  
+  display:flex;  
+  flex-direction:column;  
+  gap:15px;  
+  scrollbar-width:none;  
+}  
+  
+.chat::-webkit-scrollbar {  
+  display:none;  
+}  
+  
+.message {  
+  display:flex;  
+  align-items:flex-end;  
+  gap:9px;  
+  max-width:92%;  
+  animation:appear .25s ease;  
+}  
+  
+@keyframes appear {  
+  from {opacity:0;transform:translateY(8px)}  
+  to {opacity:1;transform:translateY(0)}  
+}  
+  
+.message.user {  
+  align-self:flex-end;  
+  flex-direction:row-reverse;  
+}  
+  
+.mini-robot {  
+  width:29px;  
+  height:29px;  
+  flex-shrink:0;  
+  display:grid;  
+  place-items:center;  
+  background:#36c9d822;  
+  border-radius:11px;  
+  font-size:17px;  
+}  
+  
+.bubble {  
+  padding:12px 14px;  
+  border-radius:17px 17px 17px 5px;  
+  background:var(--surface);  
+  border:1px solid #ffffff0a;  
+  font-size:13px;  
+  line-height:1.55;  
+  overflow-wrap:anywhere;  
+}  
+  
+.user .bubble {  
+  background:#164c68;  
+  border-radius:17px 17px 5px 17px;  
+}  
+  
+.time {  
+  display:block;  
+  color:#8995a9;  
+  font-size:9px;  
+  margin-top:5px;  
+}  
+  
+.typing {  
+  display:flex;  
+  gap:4px;  
+  padding:15px;  
+}  
+  
+.typing span {  
+  width:6px;  
+  height:6px;  
+  background:var(--cyan);  
+  border-radius:50%;  
+  animation:typing .7s infinite alternate;  
+}  
+  
+.typing span:nth-child(2) {animation-delay:.2s}  
+.typing span:nth-child(3) {animation-delay:.4s}  
+  
+@keyframes typing {  
+  to {opacity:.2;transform:translateY(-4px)}  
+}  
+  
+/* QUICK ACTIONS */  
+  
+.quick-actions {  
+  display:flex;  
+  gap:8px;  
+  overflow-x:auto;  
+  padding:5px 17px 12px;  
+  flex-shrink:0;  
+  scrollbar-width:none;  
+}  
+  
+.quick-actions button {  
+  white-space:nowrap;  
+  padding:9px 13px;  
+  border-radius:25px;  
+  background:var(--surface);  
+  border:1px solid #36c9d833;  
+  color:#b9edf0;  
+  font-size:11px;  
+}  
+  
+/* INPUT */  
+  
+.composer {  
+  padding:12px 14px;  
+  padding-bottom:max(14px,env(safe-area-inset-bottom));  
+  background:#131426;  
+  border-top:1px solid #ffffff10;  
+  display:flex;  
+  align-items:center;  
+  gap:9px;  
+  flex-shrink:0;  
+}  
+  
+.composer input {  
+  flex:1;  
+  min-width:0;  
+  height:47px;  
+  border-radius:25px;  
+  border:1px solid #ffffff13;  
+  background:var(--surface);  
+  color:white;  
+  padding:0 16px;  
+  outline:none;  
+  font-size:13px;  
+}  
+  
+.composer input:focus {  
+  border-color:var(--cyan);  
+}  
+  
+.composer input::placeholder {  
+  color:#858ba0;  
+}  
+  
+.action-btn {  
+  width:45px;  
+  height:45px;  
+  border-radius:50%;  
+  display:grid;  
+  place-items:center;  
+  background:var(--surface2);  
+  font-size:19px;  
+  flex-shrink:0;  
+}  
+  
+.send-btn {  
+  background:var(--cyan);  
+  color:#102333;  
+  font-size:19px;  
+  font-weight:bold;  
+}  
+  
+.footer-note {  
+  text-align:center;  
+  font-size:9px;  
+  color:#70778c;  
+  padding:0 10px 8px;  
+  background:#131426;  
+}  
+  
+/* SETTINGS */  
+  
+.settings-btn {  
+  width:36px;  
+  height:36px;  
+  border-radius:12px;  
+  background:var(--surface);  
+  color:var(--muted);  
+  font-size:17px;  
+}  
+  
+.toast {  
+  position:absolute;  
+  top:76px;  
+  left:50%;  
+  transform:translateX(-50%);  
+  padding:10px 15px;  
+  background:#26354a;  
+  border:1px solid #36c9d855;  
+  border-radius:12px;  
+  font-size:11px;  
+  color:white;  
+  z-index:5;  
+  display:none;  
+  white-space:nowrap;  
+}  
+  
+</style>  </head>  <body>  <div class="app">    <div class="header">  
+    <div class="brand">  
+      <div class="brand-icon">✦</div>  
+      <div>  
+        <div class="brand-name">Byte</div>  
+        <div class="brand-sub">YOUR LITTLE AI COMPANION</div>  
+      </div>  
+    </div>  <div class="status">  
+  <span class="status-dot"></span>  
+  Here with you  
+</div>  
+
+<button class="settings-btn" onclick="toggleFloatingByte()" aria-label="Toggle floating Byte">⚙</button>
+
+  </div>    <div class="robot-area">  <div class="robot">  
+
+  <div class="antenna"></div>  
+  <div class="robot-ear left"></div>  
+  <div class="robot-ear right"></div>  
+
+  <div class="robot-body">  
+    <div class="face">  
+      <div class="eye"></div>  
+      <div class="eye"></div>  
+      <div class="mouth"></div>  
+      <div class="cheek left"></div>  
+      <div class="cheek right"></div>  
+    </div>  
+  </div>  
+
+  <div class="robot-arm left"></div>  
+  <div class="robot-arm right"></div>  
+  <div class="robot-shadow"></div>  
+
+</div>  
+
+<div class="robot-label">BYTE ONLINE</div>  
+
+<div class="greeting">  
+  <h1>Hey there! 👋</h1>  
+  <p>Your little companion is ready to explore with you.</p>  
+</div>
+
+  </div>    <div class="chat" id="chat">  <div class="message">  
+  <div class="mini-robot">🤖</div>  
+  <div class="bubble">  
+    Hey! I'm Byte! 😊  
+
+    I'm your personal little AI companion. You don't have to know everything. We'll figure it out together!  
+
+    <span class="time">Just now</span>  
+  </div>  
+</div>  
+
+<div class="message">  
+  <div class="mini-robot">🤖</div>  
+  <div class="bubble">  
+    You can talk to me, ask questions, or simply tell me what you're working on.  
+
+    I'm all ears! Well... all sensors. 😄  
+    <span class="time">Just now</span>  
+  </div>  
+</div>
+
+  </div>    <div class="quick-actions">  
+    <button onclick="quickMessage('Tell me about yourself!')">👋 Meet Byte</button>  
+    <button onclick="quickMessage('Give me a little tip!')">💡 Give me a tip</button>  
+    <button onclick="quickMessage('Tell me a joke!')">😄 Make me laugh</button>  
+    <button onclick="quickMessage('What can you help me with?')">✨ What can you do?</button>  
+  </div>    <div class="composer">  
+    <button class="action-btn" onclick="showToast('Voice will be connected in the next stage!')">🎙</button>  <input  
+  id="userInput"  
+  type="text"  
+  placeholder="Talk to Byte..."  
+  autocomplete="off"  
+>  
+
+<button class="action-btn send-btn" onclick="sendMessage()">➤</button>
+
+  </div>    <div class="footer-note">  
+    BYTE · SHARED CONVERSATION  
+  </div>    <div class="toast" id="toast"></div>  </div>  <script>
+/* Both interfaces read and write through the same native conversation store. */
+var input = document.getElementById('userInput');
+var chat = document.getElementById('chat');
+var bridge = function() { return window.byteOverlay || null; };
+
+function renderMessages(messages) {
+  if (!Array.isArray(messages)) return;
+  chat.innerHTML = '';
+  messages.forEach(function(item) {
+    var role = item && item.role === 'user' ? 'user' : 'assistant';
+    var row = document.createElement('div');
+    row.className = 'message ' + role;
+    if (role === 'assistant') {
+      var avatar = document.createElement('div');
+      avatar.className = 'mini-robot';
+      avatar.textContent = '🤖';
+      row.appendChild(avatar);
+    }
+    var bubble = document.createElement('div');
+    bubble.className = 'bubble';
+    bubble.textContent = item && item.text ? item.text : '';
+    var time = document.createElement('span');
+    time.className = 'time';
+    time.textContent = item && item.timestamp ? new Date(item.timestamp).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}) : '';
+    bubble.appendChild(time);
+    row.appendChild(bubble);
+    chat.appendChild(row);
+  });
+  chat.scrollTop = chat.scrollHeight;
 }
-function showOverlay(){
- const b=bridge();
- if(!b){say('Byte overlay bridge not available.');return;}
- try{
-  if(!b.hasOverlayPermission()){say('Please grant “Display over other apps” permission first, then return and tap Show again.');b.requestOverlayPermission();return;}
-  const ok=b.showByteOverlay();
-  say(ok?'Android accepted the request. Press Home or open another app to test the floating bubble.':'Android did not start the overlay service. Check permission and try again.');
- }catch(e){say('Could not show overlay: '+e);}
+
+function refreshConversation() {
+  var b = bridge();
+  if (!b || typeof b.getMessagesJson !== 'function') return;
+  try { renderMessages(JSON.parse(b.getMessagesJson())); }
+  catch (e) { showToast('Could not refresh Byte conversation.'); }
 }
-function hideOverlay(){
- const b=bridge();
- if(!b){say('Byte overlay bridge not available.');return;}
- try{say(b.hideByteOverlay()?'Overlay service stopped.':'Overlay was not running.');}catch(e){say('Could not hide overlay: '+e);}
+
+function sendMessage() {
+  var message = input.value.trim();
+  if (!message) return;
+  var b = bridge();
+  if (!b || typeof b.sendMessage !== 'function') {
+    showToast('Shared conversation is unavailable.');
+    return;
+  }
+  try {
+    if (b.sendMessage(message)) {
+      input.value = '';
+      refreshConversation();
+    } else {
+      showToast('Message could not be saved.');
+    }
+  } catch (e) { showToast('Could not send message.'); }
 }
-</script>
-</body>
-</html>
+
+function quickMessage(message) {
+  input.value = message;
+  sendMessage();
+}
+
+function toggleFloatingByte() {
+  var b = bridge();
+  if (!b || typeof b.toggleByteOverlay !== 'function') {
+    showToast('Floating Byte is unavailable.');
+    return;
+  }
+  try {
+    var shown = b.toggleByteOverlay();
+    showToast(shown ? 'Floating Byte started.' : 'Floating Byte stopped or permission requested.');
+  } catch (e) { showToast('Could not toggle floating Byte.'); }
+}
+
+input.addEventListener('keydown', function(event) {
+  if (event.key === 'Enter') sendMessage();
+});
+
+function showToast(message) {
+  var toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.style.display = 'block';
+  clearTimeout(window.byteToastTimer);
+  window.byteToastTimer = setTimeout(function() { toast.style.display = 'none'; }, 2500);
+}
+
+refreshConversation();
+window.addEventListener('focus', refreshConversation);
+document.addEventListener('visibilitychange', function() {
+  if (!document.hidden) refreshConversation();
+});
+window.setInterval(refreshConversation, 1200);
+</script>  </body>  
+</html>  
