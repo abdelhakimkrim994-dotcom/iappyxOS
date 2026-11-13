@@ -5,7 +5,7 @@
 
     <application
         android:allowBackup="false"
-        android:label="Byte Overlay Test"
+        android:label="Byte"
         android:theme="@android:style/Theme.Material.NoActionBar"
         android:hardwareAccelerated="true"
         android:usesCleartextTraffic="false">
