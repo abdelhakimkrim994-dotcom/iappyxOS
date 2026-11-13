@@ -576,9 +576,13 @@ button {
 var input = document.getElementById('userInput');
 var chat = document.getElementById('chat');
 var bridge = function() { return window.byteOverlay || null; };
+var lastConversationSignature = '';
 
 function renderMessages(messages) {
   if (!Array.isArray(messages)) return;
+  var signature = messages.length ? String(messages[messages.length - 1].id || messages[messages.length - 1].timestamp || messages.length) : 'empty';
+  if (signature === lastConversationSignature) return;
+  lastConversationSignature = signature;
   chat.innerHTML = '';
   messages.forEach(function(item) {
     var role = item && item.role === 'user' ? 'user' : 'assistant';
